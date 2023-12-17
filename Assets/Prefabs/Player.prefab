@@ -130,7 +130,7 @@ GameObject:
   - component: {fileID: 418743183261172746}
   m_Layer: 0
   m_Name: Player
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -176,7 +176,7 @@ MonoBehaviour:
   _lookAt: {fileID: 3751624464647011190}
   _moveSpeed: 4
   _sprintSpeed: 7
-  _jumpHeight: 5
+  _jumpHeight: 7
   _maxHealth: 10
 --- !u!23 &3017025740827389665
 MeshRenderer:

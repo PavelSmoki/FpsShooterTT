@@ -9,20 +9,21 @@ namespace FpsShooter.Enemies
     public class Enemy : MonoBehaviour
     {
         [SerializeField] private NavMeshAgent _agent;
-
         [SerializeField] private float _maxHealth;
-        [SerializeField] private float _attackSpeed;
-        private float _attackDelay;
-
+        [SerializeField] private float _attackTime;
+        
         public IReactiveProperty<float> CurrentHealth { get; } = new ReactiveProperty<float>(0f);
 
         private IPlayer _player;
+        private LevelController _levelController;
         private Transform _playerTransform;
+        private float _attackDelay;
 
         [Inject]
-        private void Construct(IPlayer player)
+        private void Construct(IPlayer player, LevelController levelController)
         {
             _player = player;
+            _levelController = levelController;
         }
 
         private void Awake()
@@ -41,6 +42,7 @@ namespace FpsShooter.Enemies
             CurrentHealth.Value -= damage;
             if (CurrentHealth.Value <= 0)
             {
+                _levelController.OnEnemyKilled();
                 Destroy(gameObject);
             }
         }
@@ -48,11 +50,14 @@ namespace FpsShooter.Enemies
         private void OnTriggerStay(Collider other)
         {
             _attackDelay += Time.deltaTime;
-            
-            if (_attackDelay >= _attackSpeed)
+
+            if (_attackDelay >= _attackTime)
             {
-                _attackDelay = 0;
-                other.gameObject.GetComponent<Player>().TakeDamage();
+                if (other.CompareTag("Player"))
+                {
+                    _attackDelay = 0;
+                    other.gameObject.GetComponent<Player>().TakeDamage();
+                }
             }
         }
     }

@@ -1,4 +1,3 @@
-using System;
 using FpsShooter.Enemies;
 using UniRx;
 using UnityEngine;
@@ -26,12 +25,12 @@ namespace FpsShooter.Character
         private bool _isGrounded;
         private float _actualMoveSpeed;
 
-        private Camera _camera;
+        private Camera _mainCam;
 
         [Inject]
-        private void Construct(Camera camera)
+        private void Construct(Camera mainCam)
         {
-            _camera = camera;
+            _mainCam = mainCam;
         }
 
         private void Awake()
@@ -56,12 +55,11 @@ namespace FpsShooter.Character
         {
             if (Input.GetMouseButton(0))
             {
-                var ray = _camera.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f,
-                    _camera.nearClipPlane));
+                var ray = _mainCam.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f,
+                    _mainCam.nearClipPlane));
                 if (Physics.Raycast(ray, out var hitInfo, 1000, LayerMask.GetMask(EnemyLayerName, GroundLayerName)))
                 {
-                    if (hitInfo.transform.gameObject.TryGetComponent<Enemy>(out var enemy))
-                        enemy.TakeDamage(0.01f);
+                    hitInfo.transform.gameObject.GetComponentInParent<Enemy>()?.TakeDamage(0.01f);
                 }
             }
         }
