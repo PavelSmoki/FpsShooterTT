@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using FpsShooter.Character;
 using FpsShooter.Enemies;
 using TMPro;
@@ -17,10 +18,14 @@ namespace FpsShooter.UI
         [SerializeField] private TextMeshProUGUI _winsLabel;
         [SerializeField] private TextMeshProUGUI _losesLabel;
 
+        [Header("Inventory")] [SerializeField] private List<Image> _weaponImages;
+        [SerializeField] private List<TextMeshProUGUI> _weaponAmmoLabels;
+
+
         private IPlayer _player;
         private SaveSystem _saveSystem;
         private LevelController _levelController;
-        
+
         [Inject]
         private void Construct(IPlayer player, SaveSystem saveSystem, LevelController levelController)
         {
@@ -32,10 +37,12 @@ namespace FpsShooter.UI
         private void Start()
         {
             InitHealthBar();
-            InitLabels();
-            
+            InitWinLoseLabels();
+            InitInventoryUI();
+
             _levelController.OnAllEnemiesKilled += ShowWinScreen;
             _player.CurrentHealth.Subscribe(_ => ShowLoseScreen());
+            _player.OnShoot += UpdateAmmoInfo;
         }
 
         private void InitHealthBar()
@@ -45,10 +52,26 @@ namespace FpsShooter.UI
             _player.CurrentHealth.Subscribe(_ => UpdateHealthBar());
         }
 
-        private void InitLabels()
+        private void InitWinLoseLabels()
         {
             _winsLabel.text = $"Wins: {_saveSystem.WinCount}";
             _losesLabel.text = $"Loses: {_saveSystem.LoseCount}";
+        }
+
+        private void InitInventoryUI()
+        {
+            for (int i = 0; i < _weaponImages.Count; i++)
+            {
+                UpdateAmmoInfo(i);
+            }
+        }
+
+        private void UpdateAmmoInfo(int index)
+        {
+            var inventory = _player.GetInventory();
+            
+            _weaponImages[index].sprite = inventory.Guns[index].GunSprite;
+            _weaponAmmoLabels[index].text = $"{inventory.Guns[index].AmmoLeft}/{inventory.Guns[index].MaxAmmo}";
         }
 
         private void ShowWinScreen()

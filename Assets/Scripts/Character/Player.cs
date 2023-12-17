@@ -1,8 +1,9 @@
+using System;
 using FpsShooter.Enemies;
+using FpsShooter.Guns;
 using UniRx;
 using UnityEngine;
 using Zenject;
-using Vector3 = UnityEngine.Vector3;
 
 namespace FpsShooter.Character
 {
@@ -17,15 +18,20 @@ namespace FpsShooter.Character
         [SerializeField] private float _sprintSpeed;
         [SerializeField] private float _jumpHeight;
         [SerializeField] private int _maxHealth;
+        [SerializeField] private Inventory _inventory;
 
         public IReactiveProperty<int> CurrentHealth { get; } = new ReactiveProperty<int>(0);
+        public Action<int> OnShoot { get; set; }
 
         private float _horizontalInput;
         private float _verticalInput;
         private bool _isGrounded;
         private float _actualMoveSpeed;
-
         private Camera _mainCam;
+
+        private Gun _currentWeapon;
+        private float _shootDelay;
+        private int _currentWeaponIndex;
 
         [Inject]
         private void Construct(Camera mainCam)
@@ -36,6 +42,12 @@ namespace FpsShooter.Character
         private void Awake()
         {
             CurrentHealth.Value = _maxHealth;
+            ChangeWeapon(0);
+            
+            foreach (var gun in _inventory.Guns)
+            {
+                gun.ResetAmmoLeft();
+            }
         }
 
         private void Update()
@@ -48,20 +60,7 @@ namespace FpsShooter.Character
             PlayerInput();
             PlayerJump();
             SpeedControl();
-            Shoot();
-        }
-
-        private void Shoot()
-        {
-            if (Input.GetMouseButton(0))
-            {
-                var ray = _mainCam.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f,
-                    _mainCam.nearClipPlane));
-                if (Physics.Raycast(ray, out var hitInfo, 1000, LayerMask.GetMask(EnemyLayerName, GroundLayerName)))
-                {
-                    hitInfo.transform.gameObject.GetComponentInParent<Enemy>()?.TakeDamage(0.01f);
-                }
-            }
+            ShootingProcessing();
         }
 
         private void PlayerInput()
@@ -69,7 +68,29 @@ namespace FpsShooter.Character
             _horizontalInput = Input.GetAxisRaw("Horizontal");
             _verticalInput = Input.GetAxisRaw("Vertical");
 
+            if (Input.GetKeyDown(KeyCode.Alpha1))
+            {
+                ChangeWeapon(0);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha2))
+            {
+                ChangeWeapon(1);
+            }
+
+            if (Input.GetKeyDown(KeyCode.Alpha3))
+            {
+                ChangeWeapon(2);
+            }
+
             _actualMoveSpeed = Input.GetKey(KeyCode.LeftShift) ? _sprintSpeed : _moveSpeed;
+        }
+
+        private void ChangeWeapon(int index)
+        {
+            _currentWeaponIndex = index;
+            _currentWeapon = _inventory.Guns[index];
+            _shootDelay = 1 / _currentWeapon.ShootingSpeed;
         }
 
         private void PlayerJump()
@@ -88,6 +109,37 @@ namespace FpsShooter.Character
             {
                 var limitedVel = flatVel.normalized * _actualMoveSpeed;
                 _rb.velocity = new Vector3(limitedVel.x, _rb.velocity.y, limitedVel.z);
+            }
+        }
+
+        private void ShootingProcessing()
+        {
+            _shootDelay -= Time.deltaTime;
+
+            if (_shootDelay <= 0)
+            {
+                if (Input.GetMouseButton(0))
+                {
+                    _shootDelay = 1 / _currentWeapon.ShootingSpeed;
+                    Shot();
+                }
+            }
+        }
+
+        private void Shot()
+        {
+            if (_currentWeapon.AmmoLeft > 0)
+            {
+                Debug.Log("Shot");
+                _currentWeapon.AmmoLeft--;
+                OnShoot.Invoke(_currentWeaponIndex);
+
+                var ray = _mainCam.ScreenPointToRay(new Vector3(Screen.width * 0.5f, Screen.height * 0.5f,
+                    _mainCam.nearClipPlane));
+                if (Physics.Raycast(ray, out var hitInfo, 1000, LayerMask.GetMask(EnemyLayerName, GroundLayerName)))
+                {
+                    hitInfo.transform.gameObject.GetComponentInParent<Enemy>()?.TakeDamage(_currentWeapon.Damage);
+                }
             }
         }
 
@@ -116,6 +168,11 @@ namespace FpsShooter.Character
         public Transform GetLookAtTransform()
         {
             return _lookAt;
+        }
+
+        public Inventory GetInventory()
+        {
+            return _inventory;
         }
     }
 }
